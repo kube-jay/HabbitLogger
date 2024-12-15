@@ -7,22 +7,16 @@ import java.util.*;
 import java.sql.Connection;
 
 public class Main {
-    public static Scanner scanner;
-    public static DbConnectores db;
-    static String tableName = "habittable";
-
+    public static Scanner scanner = new Scanner(System.in);
+    public static DbConnectores db = new DbConnectores();
 
     public static void main(String[] args) {
-        db = new DbConnectores();
-        Connection conn = db.connectToDb("habitDb", "postgres", "1234");
-        scanner = new Scanner(System.in);
-        String tableName = "habittable";
 
+        db.createTable();
 
         boolean running = true;
 
         while (running) {
-            db.createTable(conn, tableName);
             System.out.println("-- A Habit Logger--");
             System.out.println("1. Add a new habit");
             System.out.println("2. Update a Habit");
@@ -30,74 +24,46 @@ public class Main {
             System.out.println("4. Delete a habit");
             System.out.println("5. Search a habit");
             System.out.println("6. Search Number of Occurence of Habit");
+            System.out.println("7. Exit");
 
             System.out.println("make a choice: ");
             int choice = scanner.nextInt();
-            //scanner.nextInt();
 
             switch (choice) {
-                case 1:
-                    addHabit();
-                    break;
-
-                case 2:
-                    updateHabit();
-                    break;
-
-                case 3:
-                    viewHabits();
-                    break;
-
-                case 4:
-                    deleteHabit();
-                    break;
-
-                case 5:
-                    searchHabit();
-                    break;
-
-                case 6:
-                    numOfOccurence();
-                    break;
-
-                default:
-                    System.out.println("Invalid option!");
+                case 1 ->addHabit();
+                case 2 -> updateHabit();
+                case 3 -> db.viewRows();
+                case 4 -> deleteHabit();
+                case 5 -> searchHabit();
+                case 6 -> numOfOccurence();
+                case 7 -> running = false;
+                default -> System.out.println("Invalid option!");
             }
 
 
         }
     }
 
-    private static void viewHabits() {
-        Connection conn = db.connectToDb("habitDb", "postgres", "1234");
-        String tableName = "habitTable";
-        db.viewRows(conn, tableName );
-    }
+
 
     private static void deleteHabit() {
-        System.out.println("Input Habit to delete the: ");
+        System.out.println("Input Habit to delete:");
         String habit = scanner.next();
-        Connection conn = db.connectToDb("habitDb", "postgres", "1234");
-        String tableName = "habittable";
-        db.deleteHabit(conn, tableName, habit );
+        db.deleteHabit(habit);
     }
 
     private static  void searchHabit () {
-        System.out.println("Input Habit to search: ");
+        System.out.println("Input Habit to search:");
         String habit = scanner.next();
-        Connection conn = db.connectToDb("habitDb", "postgres", "1234");
-        String tableName = "habitTable";
-        db.searchHabitName(conn, tableName, habit );
+        db.searchHabitName(habit);
     }
 
     public static void updateHabit(){
-        System.out.println("What Habit will you change: ");
+        System.out.println("What Habit will you change?");
         String oldHabit = scanner.next();
-        System.out.println("whats the new update? : ");
+        System.out.println("What's the new update?");
         String newHabit = scanner.next();
-        Connection conn = db.connectToDb("habitDb", "postgres", "1234");
-        String tableName = "habitTable";
-        db.updateHabit(conn, tableName, oldHabit, newHabit);
+        db.updateHabit(oldHabit, newHabit);
     }
 
     public static void addHabit() {
@@ -107,17 +73,13 @@ public class Main {
         String dateStr = scanner.next();
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         LocalDate date = LocalDate.parse(dateStr, dtf);
-        Connection conn = db.connectToDb("habitDb", "postgres", "1234");
-        String tableName = "habittable";
-        db.insertRow(conn, tableName,  habit, date);
+        db.insertRow(habit, date);
     }
 
     public static void numOfOccurence() {
-        System.out.println("Enter the Habit : ");
+        System.out.println("Enter the Habit:");
         String habit = scanner.next();
-        Connection conn = db.connectToDb("habitDb", "postgres", "1234");
-        String tableName = "habittable";
-        db.numOccur(conn, tableName, habit);
+        db.numOccur(habit);
     }
 }
 

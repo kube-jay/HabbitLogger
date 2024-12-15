@@ -6,124 +6,118 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.sql.*;
+import java.util.Scanner;
 
 public class DbConnectores {
-    public Connection connectToDb(String dbname, String user, String pass) {
-        Connection conn = null;
+    public static Scanner scanner = new Scanner(System.in);
+    private static final String URL = "jdbc:postgresql://localhost:5432/habitDb";
+    private static final String USER = "postgres";
+    private static final String PASSWORD = "1234";
+    private static final String TABLE_NAME = "habittable";
+    public Connection connectToDb() {
         try {
-            Class.forName("org.postgresql.Driver");
-            conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/" + dbname, user, pass);
-            if (conn != null) {
-                System.out.println("Habit data loaded!");
+            return DriverManager.getConnection(URL, USER, PASSWORD);
+        } catch (SQLException e) {
+            System.out.println("Data not loaded!" + e.getMessage());
+            return null;
+        }
+
+    }
+
+    public void executeUpdate(String query, Object... params) {
+        try (Connection conn = connectToDb();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            // Set parameters dynamically
+            for (int i = 0; i < params.length; i++) {
+                stmt.setObject(i + 1, params[i]);
             }
-        } catch (Exception e) {
-            System.out.println("Data not loaded!" + e);
-        }
-        return conn;
-    }
+            stmt.executeUpdate();
 
-    public void createTable(Connection conn, String tableName) {
-        Statement statement;
-        try {
-            String query = "CREATE TABLE IF NOT EXISTS " + tableName + " " +
-                    "(id SERIAL PRIMARY KEY, habitname varchar(255) NOT NULL, habitdate DATE NOT NULL)";
-            statement = conn.createStatement();
-            statement.executeUpdate(query);
-        } catch (Exception e) {
-            System.out.println(e);
+        } catch (SQLException e) {
+            System.out.println("Error executing update: " + e.getMessage());
         }
     }
 
-    public void insertRow(Connection conn, String tableName, String habitName, LocalDate date) {
-        Statement statement;
-        try {
-            String query = "insert into "+tableName +" (habitname, habitdate) values ('"+habitName+"', '"+date+"')";
-            statement = conn.createStatement();
-            statement.executeUpdate(query);
 
-        } catch (Exception e) {
-            System.out.println(e);
+
+    public ResultSet executeQuery(Connection conn, String query, Object... params) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement(query);
+
+        // Set parameters dynamically
+        for (int i = 0; i < params.length; i++) {
+            stmt.setObject(i + 1, params[i]);
         }
+        return stmt.executeQuery();
+
+
     }
 
-    public void viewRows(Connection conn, String tableName) {
-        Statement statement;
-        ResultSet rs = null;
-        try {
-            String query = "Select * from "+tableName+" ";
-            statement = conn.createStatement();
-            rs = statement.executeQuery(query);
-            System.out.println("ID\t\tHabit\t\tDate ");
-            while (rs.next()) {
-                System.out.print(rs.getString("id")+"\t\t");
-                System.out.print(rs.getString("habitname")+"\t\t");
-                System.out.println(rs.getString("habitdate")+"\t");
+    public void createTable() {
+        String query = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " " +
+                "(id SERIAL PRIMARY KEY, habitname varchar(255) NOT NULL, habitdate DATE NOT NULL)";
+        executeUpdate(query);
+    }
+
+    public void insertRow(String habitName, LocalDate date) {
+        String query = "insert into "+TABLE_NAME +" (habitname, habitdate) values (?, ?)";
+        executeUpdate(query, habitName, date);
+    }
+
+    public void viewRows() {
+        String query = "SELECT * FROM " + TABLE_NAME;
+        try (Connection conn = connectToDb();
+             ResultSet rs = executeQuery( conn, query)) {
+            System.out.println("ID\t\tHabit\t\tDate");
+            while ( rs.next()) {
+                System.out.print(rs.getInt("id") + "\t\t");
+                System.out.print(rs.getString("habitname") + "\t\t");
+                System.out.println(rs.getDate("habitdate"));
             }
-
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-
-    }
-
-    public void updateHabit(Connection conn, String tableName, String oldHabit, String newHabit) {
-        Statement statement;
-        try {
-            String query = "Update  "+tableName+" set habitname = '"+newHabit+"' where habitname = '"+oldHabit+"'  ";
-            statement = conn.createStatement();
-            statement.executeUpdate(query);
-
-        } catch (Exception e) {
-            System.out.println(e);
+        } catch (SQLException e) {
+            System.out.println("Error viewing habits: " + e.getMessage());
         }
     }
 
-    public void searchHabitName (Connection conn, String tableName, String habitname) {
-        Statement statement;
-        ResultSet rs = null;
-        try {
-            String query = "select * from "+tableName+" where habitname = '"+habitname+"'";
-            statement = conn.createStatement();
-            rs = statement.executeQuery(query);
-            System.out.println("ID\t\tHabit\t\tDate ");
-            while (rs.next()) {
-                System.out.print(rs.getString("id")+"\t\t");
-                System.out.print(rs.getString("habitname")+"\t\t");
-                System.out.println(rs.getString("habitdate")+"\t");
+    public void updateHabit(String oldHabit, String newHabit) {
+        String query = "UPDATE " + TABLE_NAME + " SET habitname = ? WHERE habitname = ?";
+        executeUpdate(query, newHabit, oldHabit);
+    }
+
+    public void searchHabitName (String habitName) {
+        String query = "SELECT * FROM " + TABLE_NAME + " WHERE habitname = ?";
+        try (Connection conn = connectToDb();
+             ResultSet rs = executeQuery(conn, query, habitName)) {
+            System.out.println("ID\t\tHabit\t\tDate");
+            while (rs != null && rs.next()) {
+                System.out.print(rs.getInt("id") + "\t\t");
+                System.out.print(rs.getString("habitname") + "\t\t");
+                System.out.println(rs.getDate("habitdate"));
             }
-
-        } catch (Exception e) {
-            System.out.println(e);
+        } catch (SQLException e) {
+            System.out.println("Error searching habits: " + e.getMessage());
         }
+
     }
 
-    public void numOccur (Connection conn, String tableName, String habitname) {
-        Statement statement;
-        ResultSet rs = null;
-        try {
-            String query = "select count(habitname) from "+tableName+" where habitname = '"+habitname+"'";
-            statement = conn.createStatement();
-            rs = statement.executeQuery(query);
-            while (rs.next()){
-            int count = rs.getInt(1);
-                System.out.println("The habit occured "+count+" time(s)");
+    public void numOccur (String habitName) {
+        String query = "SELECT COUNT(habitname) FROM " + TABLE_NAME + " WHERE habitname = ?";
+        try (Connection conn = connectToDb();
+             ResultSet rs = executeQuery(conn, query, habitName)) {
+            if (rs != null && rs.next()) {
+                int count = rs.getInt(1);
+                System.out.println("The habit occurred " + count + " time(s)");
             }
-
-        } catch (Exception e) {
-            System.out.println(e);
+        } catch (SQLException e) {
+            System.out.println("Error counting habit occurrences: " + e.getMessage());
         }
     }
 
-    public void deleteHabit(Connection conn, String tableName, String habitname) {
-        Statement statement;
-        try {
-            String query = "delete from "+tableName+" where habitname= '"+habitname+"'";
-            statement = conn.createStatement();
-            statement.executeUpdate(query);
-
-        } catch (Exception e) {
-            System.out.println(e);
-        }
+    public void deleteHabit(String habitName) {
+        String query = "DELETE FROM " + TABLE_NAME + " WHERE habitname = ?";
+        executeUpdate(query, habitName);
     }
+
 
 }
